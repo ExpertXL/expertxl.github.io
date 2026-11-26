@@ -1,0 +1,464 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>U1 Panel</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="U1 Panel">
+<meta name="theme-color" content="#120b26">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<style>
+  :root {
+    --bg: #120b26; --bg2: #1b1238; --card: #231848; --card2: #2c2058; --line: rgba(255,255,255,.08);
+    --text: #f4f0ff; --muted: #a89cc9; --faint: #6f6494;
+    --duel: #f25c7a; --kel: #5ecc78; --pine: #40c4c4; --gold: #ffd65c; --bad: #ff7a7a;
+    --accent: var(--duel);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { margin: 0; background: var(--bg); color: var(--text); }
+  body {
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    min-height: 100vh; padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+  header {
+    position: sticky; top: 0; z-index: 5; background: rgba(18,11,38,.92); backdrop-filter: blur(12px);
+    padding: calc(env(safe-area-inset-top) + 10px) 18px 10px; display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  header h1 { font-size: 22px; margin: 0; letter-spacing: -.3px; flex: 1; }
+  header h1 small { display: block; font-size: 12px; font-weight: 500; color: var(--muted); letter-spacing: 0; }
+  .iconbtn { background: var(--card); border: 0; color: var(--text); width: 40px; height: 40px; border-radius: 12px; font-size: 18px; }
+  .iconbtn.spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  main { padding: 14px 14px 0; max-width: 720px; margin: 0 auto; }
+  nav.tabs {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; background: rgba(27,18,56,.96);
+    backdrop-filter: blur(12px); border-top: 1px solid var(--line); padding: 6px 6px calc(6px + env(safe-area-inset-bottom));
+  }
+  nav.tabs button {
+    flex: 1; background: none; border: 0; color: var(--muted); font: inherit; font-size: 11.5px; font-weight: 600;
+    padding: 6px 2px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; gap: 3px;
+  }
+  nav.tabs button .dot { width: 26px; height: 26px; border-radius: 9px; display: grid; place-items: center; font-size: 15px; background: var(--card); }
+  nav.tabs button.on { color: var(--text); }
+  nav.tabs button.on .dot { background: var(--c); color: #120b26; }
+  .hero {
+    border-radius: 20px; padding: 16px; margin-bottom: 12px;
+    background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 38%, var(--card)), var(--card));
+  }
+  .hero .row { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
+  .hero .big { font-size: 46px; font-weight: 800; line-height: 1; letter-spacing: -1px; }
+  .hero .lbl { color: var(--text); opacity: .85; font-weight: 600; font-size: 13px; margin-top: 4px; }
+  .live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; background: rgba(0,0,0,.25); padding: 4px 9px; border-radius: 20px; }
+  .live i { width: 8px; height: 8px; border-radius: 50%; background: #7cf29c; box-shadow: 0 0 0 0 rgba(124,242,156,.7); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 70% { box-shadow: 0 0 0 7px rgba(124,242,156,0); } 100% { box-shadow: 0 0 0 0 rgba(124,242,156,0); } }
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+  @media (min-width: 560px) { .grid { grid-template-columns: repeat(3, 1fr); } }
+  .tile { background: var(--card); border-radius: 16px; padding: 12px 13px; min-height: 78px; }
+  .tile .v { font-size: 26px; font-weight: 800; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+  .tile .k { color: var(--muted); font-size: 12.5px; font-weight: 600; }
+  .tile .d { font-size: 11.5px; color: var(--faint); margin-top: 2px; }
+  .card { background: var(--card); border-radius: 18px; padding: 14px; margin-bottom: 12px; }
+  .card h2 { font-size: 14px; margin: 0 0 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .6px; font-weight: 700; display: flex; justify-content: space-between; }
+  .card h2 span { text-transform: none; letter-spacing: 0; color: var(--faint); font-weight: 600; }
+  .list { list-style: none; margin: 0; padding: 0; }
+  .list li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
+  .list li:first-child { border-top: 0; }
+  .av { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; color: #120b26; flex: none; }
+  .list .main { flex: 1; min-width: 0; }
+  .list .t { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list .s { color: var(--muted); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .list .r { color: var(--faint); font-size: 12px; text-align: right; flex: none; }
+  .empty { color: var(--faint); font-size: 13.5px; padding: 6px 0; }
+  .bars { display: flex; align-items: flex-end; gap: 4px; height: 110px; padding-top: 16px; }
+  .bars div { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; }
+  .bars b { display: block; width: 100%; border-radius: 5px 5px 2px 2px; background: var(--accent); min-height: 3px; position: relative; }
+  .bars b em { position: absolute; top: -16px; left: 0; right: 0; text-align: center; font-style: normal; font-size: 10px; color: var(--muted); font-weight: 700; }
+  .bars span { font-size: 9.5px; color: var(--faint); }
+  .apps { display: grid; gap: 10px; }
+  .appcard { background: var(--card); border-radius: 18px; padding: 14px; border-left: 5px solid var(--c); }
+  .appcard .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .appcard .name { font-weight: 800; font-size: 17px; }
+  .appcard .nums { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .appcard .nums div { background: var(--bg2); border-radius: 12px; padding: 8px; }
+  .appcard .nums b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+  .appcard .nums span { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .note { color: var(--muted); font-size: 13px; line-height: 1.45; }
+  a.btn, button.btn {
+    display: block; width: 100%; text-align: center; background: var(--card2); color: var(--text); text-decoration: none;
+    border: 0; border-radius: 14px; padding: 13px; font: inherit; font-weight: 700; margin-top: 8px;
+  }
+  button.primary { background: var(--duel); color: #fff; }
+  .login { max-width: 380px; margin: 9vh auto 0; padding: 0 22px; text-align: center; }
+  .login img { width: 84px; height: 84px; border-radius: 22px; }
+  .login h1 { margin: 14px 0 4px; font-size: 26px; }
+  .login p { color: var(--muted); margin: 0 0 22px; }
+  .login input {
+    width: 100%; background: var(--card); border: 1px solid var(--line); color: var(--text); font: inherit; font-size: 16px;
+    padding: 14px; border-radius: 14px; margin-bottom: 10px; outline: none;
+  }
+  .login input:focus { border-color: var(--duel); }
+  .login .links { display: flex; justify-content: space-between; margin-top: 14px; }
+  .login .links button { background: none; border: 0; color: var(--muted); font: inherit; font-size: 13.5px; padding: 6px 0; }
+  .msg { min-height: 20px; font-size: 13.5px; margin: 4px 0 6px; color: var(--bad); }
+  .msg.ok { color: var(--kel); }
+  .err { background: rgba(255,122,122,.12); color: #ffb3b3; border-radius: 14px; padding: 10px 12px; font-size: 13px; margin-bottom: 12px; }
+  .stamp { text-align: center; color: var(--faint); font-size: 12px; margin: 4px 0 14px; }
+  .hidden { display: none !important; }
+  .skeleton .v { color: transparent; background: var(--card2); border-radius: 8px; width: 60%; }
+</style>
+</head>
+<body>
+
+<section id="login" class="login hidden">
+  <img src="icon-180.png" alt="">
+  <h1>U1 Panel</h1>
+  <p>U1 Games uygulamalarının istatistikleri</p>
+  <input id="email" type="email" autocomplete="username" value="startupcompanyy@gmail.com" placeholder="E-posta">
+  <input id="pass" type="password" autocomplete="current-password" placeholder="Şifre">
+  <div id="loginMsg" class="msg"></div>
+  <button class="btn primary" id="signIn">Giriş yap</button>
+  <div class="links">
+    <button id="signUp">İlk kez mi? Hesap oluştur</button>
+    <button id="reset">Şifremi unuttum</button>
+  </div>
+</section>
+
+<section id="verify" class="login hidden">
+  <img src="icon-180.png" alt="">
+  <h1>E-postanı doğrula</h1>
+  <p id="verifyText">Doğrulama bağlantısını e-postana gönderdik. Bağlantıya dokunduktan sonra buraya dönüp "Doğruladım"a bas.</p>
+  <div id="verifyMsg" class="msg"></div>
+  <button class="btn primary" id="verified">Doğruladım</button>
+  <button class="btn" id="resend">Bağlantıyı yeniden gönder</button>
+  <button class="btn" id="out1">Çıkış</button>
+</section>
+
+<div id="app" class="hidden">
+  <header>
+    <h1 id="title">Genel bakış<small id="sub">Tüm uygulamalar</small></h1>
+    <button class="iconbtn" id="refresh" aria-label="Yenile">↻</button>
+  </header>
+  <main id="view"></main>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification,
+  sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+import { getFirestore, collection, collectionGroup, query, where, orderBy, limit, getDocs, getDoc, doc, getCountFromServer, Timestamp }
+  from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyAVmKn4SL2rILvVeWETx8rSBfr8wr0DL7U",
+  authDomain: "kelimoloji-5b0c9.firebaseapp.com",
+  projectId: "kelimoloji-5b0c9",
+  storageBucket: "kelimoloji-5b0c9.firebasestorage.app",
+  messagingSenderId: "412366119973",
+  appId: "1:412366119973:web:cbba6a0bf5c93ae7c9cbcc",
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+setPersistence(auth, browserLocalPersistence).catch(() => {});
+
+const ADMIN = "startupcompanyy@gmail.com";
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const nf = new Intl.NumberFormat("tr-TR");
+const fmt = (n) => (n == null ? "—" : nf.format(n));
+const AV = ["#5ecc78", "#ffd65c", "#f25c7a", "#5aa9ff", "#b28cff", "#40c4c4"];
+const CONSOLE = "https://play.google.com/console/u/1/developers/5968796204935502846";
+
+const APPS = {
+  duel: { name: "Düello", full: "Kelime Düellosu", color: "#f25c7a", icon: "⚔️", play: CONSOLE + "/app/4972015761815148825/statistics" },
+  kel: { name: "Kelimeloji", full: "Kelimeloji", color: "#5ecc78", icon: "🔤", play: CONSOLE + "/app-list" },
+  pine: { name: "Pine Game", full: "Pine Game", color: "#40c4c4", icon: "🌲", play: CONSOLE + "/app-list" },
+};
+const TABS = [
+  { id: "home", label: "Genel", icon: "📊", color: "#ffd65c" },
+  { id: "duel", label: "Düello", icon: "⚔️", color: APPS.duel.color },
+  { id: "kel", label: "Kelimeloji", icon: "🔤", color: APPS.kel.color },
+  { id: "pine", label: "Pine Game", icon: "🌲", color: APPS.pine.color },
+];
+
+// ---------------------------------------------------------------- time helpers (phone's own time zone)
+const now = () => Date.now();
+const dayStart = (ms = now()) => { const d = new Date(ms); d.setHours(0, 0, 0, 0); return d.getTime(); };
+const ts = (ms) => Timestamp.fromMillis(ms);
+const msOf = (v) => (v && typeof v.toMillis === "function" ? v.toMillis() : null);
+function ago(ms) {
+  if (!ms) return "";
+  const s = Math.max(0, Math.round((now() - ms) / 1000));
+  if (s < 60) return "az önce";
+  if (s < 3600) return Math.floor(s / 60) + " dk önce";
+  if (s < 86400) return Math.floor(s / 3600) + " sa önce";
+  const d = Math.floor(s / 86400);
+  return d < 7 ? d + " gün önce" : new Date(ms).toLocaleDateString("tr-TR", { day: "numeric", month: "short" });
+}
+const monthId = () => { const d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0"); };
+function isoWeekId() {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  const day = (d.getDay() + 6) % 7; d.setDate(d.getDate() - day + 3);
+  const firstThu = new Date(d.getFullYear(), 0, 4);
+  const week = 1 + Math.round(((d - firstThu) / 86400000 - 3 + ((firstThu.getDay() + 6) % 7)) / 7);
+  return d.getFullYear() + "-W" + String(week).padStart(2, "0");
+}
+
+// ---------------------------------------------------------------- data
+const safe = async (p) => { try { return await p; } catch (e) { console.warn(e); errors.add(e.code || e.message); return null; } };
+const count = (q) => safe(getCountFromServer(q).then((r) => r.data().count));
+const errors = new Set();
+
+function perDay(docs, field, days = 14) {
+  const start = dayStart(now() - (days - 1) * 86400000);
+  const buckets = Array.from({ length: days }, (_, i) => ({ t: start + i * 86400000, n: 0 }));
+  for (const d of docs) {
+    const ms = msOf(d.get(field));
+    if (ms == null || ms < start) continue;
+    const i = Math.floor((dayStart(ms) - start) / 86400000);
+    if (buckets[i]) buckets[i].n++;
+  }
+  return buckets;
+}
+
+async function playerStats(col) {
+  const c = collection(db, col);
+  const t = now();
+  const [total, online, dau, today, week, recent] = await Promise.all([
+    count(c),
+    count(query(c, where("lastSeen", ">=", ts(t - 3 * 60000)))),
+    count(query(c, where("lastSeen", ">=", ts(t - 86400000)))),
+    count(query(c, where("createdAt", ">=", ts(dayStart())))),
+    count(query(c, where("createdAt", ">=", ts(dayStart(t - 6 * 86400000))))),
+    safe(getDocs(query(c, where("createdAt", ">=", ts(dayStart(t - 13 * 86400000))), orderBy("createdAt", "desc"), limit(1000)))),
+  ]);
+  const docs = recent ? recent.docs : [];
+  return { total, online, dau, today, week, chart: perDay(docs, "createdAt"), newest: docs.slice(0, 12) };
+}
+
+async function loadDuel() {
+  const t = now();
+  const duels = collection(db, "duels");
+  const [p, active, waiting, todayGames, reports, buys, buysToday, league] = await Promise.all([
+    playerStats("duel_users"),
+    count(query(duels, where("status", "==", "active"))),
+    count(query(duels, where("status", "==", "open"))),
+    count(query(duels, where("createdAt", ">=", ts(dayStart())))),
+    safe(getDocs(query(collection(db, "duel_reports"), orderBy("at", "desc"), limit(10)))),
+    safe(getDocs(query(collection(db, "duel_purchases"), orderBy("at", "desc"), limit(15)))),
+    count(query(collection(db, "duel_purchases"), where("at", ">=", ts(dayStart())))),
+    safe(getDocs(query(collection(db, "duel_leagues", monthId(), "players"), orderBy("gold", "desc"), limit(8)))),
+  ]);
+  return { ...p, active, waiting, todayGames, reports: reports?.docs || [], buys: buys?.docs || [], buysToday, league: league?.docs || [] };
+}
+
+async function loadKel() {
+  const games = collection(db, "games");
+  const [p, active, todayGames, msgs, reports, league] = await Promise.all([
+    playerStats("users"),
+    count(query(games, where("status", "==", "active"))),
+    count(query(games, where("createdAt", ">=", ts(dayStart())))),
+    count(collectionGroup(db, "messages")),
+    safe(getDocs(query(collection(db, "reports"), orderBy("at", "desc"), limit(10)))),
+    safe(getDocs(query(collection(db, "leagues", isoWeekId() + "_genel", "players"), orderBy("lp", "desc"), limit(8)))),
+  ]);
+  // Kelimeloji reports keep only the reported player's id: look up the nickname
+  const reps = reports?.docs || [];
+  const nicks = await Promise.all(reps.map((r) => safe(getDoc(doc(db, "users", r.get("reported") || "-")).then((u) => u.get("nick")))));
+  reps.forEach((r, i) => { r.reportedNick = nicks[i]; });
+  return { ...p, active, todayGames, msgs, reports: reps, league: league?.docs || [] };
+}
+
+// ---------------------------------------------------------------- views
+const tile = (v, k, d = "") => `<div class="tile"><div class="v">${fmt(v)}</div><div class="k">${k}</div>${d ? `<div class="d">${d}</div>` : ""}</div>`;
+const av = (nick, i) => `<div class="av" style="background:${AV[(i ?? 0) % AV.length]}">${esc((nick || "?").slice(0, 1).toUpperCase())}</div>`;
+
+function chart(b) {
+  const max = Math.max(1, ...b.map((x) => x.n));
+  return `<div class="bars">${b.map((x) => {
+    const d = new Date(x.t);
+    return `<div><b style="height:${Math.max(3, (x.n / max) * 100)}%">${x.n ? `<em>${x.n}</em>` : ""}</b><span>${d.getDate()}</span></div>`;
+  }).join("")}</div>`;
+}
+function members(docs) {
+  if (!docs.length) return `<div class="empty">Son 14 günde yeni üye yok.</div>`;
+  return `<ul class="list">${docs.map((d) => `<li>${av(d.get("nick"), d.get("avatar"))}
+    <div class="main"><div class="t">${esc(d.get("nick") || "(adsız)")}</div>
+    <div class="s">${d.get("played") != null ? fmt(d.get("played")) + " oyun" : ""}${d.get("gold") != null ? " · " + fmt(d.get("gold")) + " altın" : ""}</div></div>
+    <div class="r">${ago(msOf(d.get("createdAt")))}</div></li>`).join("")}</ul>`;
+}
+function reportList(docs) {
+  if (!docs.length) return `<div class="empty">Şikâyet yok. 🎉</div>`;
+  return `<ul class="list">${docs.map((d) => `<li><div class="av" style="background:var(--bad)">!</div>
+    <div class="main"><div class="t">${esc(d.get("nick") || d.reportedNick || "Oyuncu")}</div>
+    <div class="s">${esc(d.get("reason") || "Neden belirtilmedi")}</div></div>
+    <div class="r">${ago(msOf(d.get("at")))}</div></li>`).join("")}</ul>`;
+}
+function leagueList(docs, field, unit) {
+  const rows = docs.filter((d) => !String(d.get("nick") || "").startsWith("zztest"));
+  if (!rows.length) return `<div class="empty">Henüz sıralamada kimse yok.</div>`;
+  return `<ul class="list">${rows.map((d, i) => `<li><div class="av" style="background:${i === 0 ? "var(--gold)" : "var(--card2)"};color:${i === 0 ? "#120b26" : "var(--text)"}">${i + 1}</div>
+    <div class="main"><div class="t">${esc(d.get("nick"))}</div></div><div class="r" style="color:var(--text);font-weight:700">${fmt(d.get(field))} ${unit}</div></li>`).join("")}</ul>`;
+}
+
+function hero(a, online, dau) {
+  return `<div class="hero" style="--accent:${a.color}"><div class="row">
+    <div><div class="big">${fmt(online)}</div><div class="lbl">şu an oynuyor</div></div>
+    <div style="text-align:right"><span class="live"><i></i>CANLI</span><div class="lbl">${fmt(dau)} kişi son 24 saatte</div></div>
+  </div></div>`;
+}
+
+function renderDuel(d) {
+  const a = APPS.duel;
+  const gold = d.buys.reduce((s, x) => s + (x.get("gold") || 0), 0);
+  return hero(a, d.online, d.dau) + `
+  <div class="grid">
+    ${tile(d.today, "Bugün yeni üye", fmt(d.week) + " son 7 günde")}
+    ${tile(d.total, "Toplam üye")}
+    ${tile(d.active, "Şu an süren düello", fmt(d.waiting) + " rakip bekliyor")}
+    ${tile(d.todayGames, "Bugün başlayan düello", "bilgisayara karşı oyunlar hariç")}
+    ${tile(d.buysToday, "Bugün satın alma", d.buys.length ? "son " + d.buys.length + " alımda " + fmt(gold) + " altın" : "")}
+    ${tile(d.reports.length, "Son şikâyetler")}
+  </div>
+  <div class="card" style="--accent:${a.color}"><h2>Yeni üyeler <span>son 14 gün</span></h2>${chart(d.chart)}</div>
+  <div class="card"><h2>Son satın almalar</h2>${d.buys.length ? `<ul class="list">${d.buys.map((x) => `<li>
+      <div class="av" style="background:var(--gold)">₺</div>
+      <div class="main"><div class="t">${fmt(x.get("gold"))} altın</div><div class="s">${esc(x.get("nick") || "")} · ${esc(x.get("product") || "")}</div></div>
+      <div class="r">${ago(msOf(x.get("at")))}</div></li>`).join("")}</ul>`
+    : `<div class="note">Henüz kayıtlı satın alma yok. Satın almalar Düello'nun bir sonraki güncellemesinden (1.1.1) itibaren burada listelenir; şimdiye kadarki satışlar Play Console'da.</div>`}
+    <a class="btn" href="${a.play}" target="_blank" rel="noopener">Play Console'da aç ↗</a></div>
+  <div class="card"><h2>Son katılanlar</h2>${members(d.newest)}</div>
+  <div class="card"><h2>Aylık sıralama <span>${monthId()}</span></h2>${leagueList(d.league, "gold", "altın")}</div>
+  <div class="card"><h2>Şikâyetler</h2>${reportList(d.reports)}</div>`;
+}
+
+function renderKel(k) {
+  const a = APPS.kel;
+  return hero(a, k.online, k.dau) + `
+  <div class="grid">
+    ${tile(k.today, "Bugün yeni üye", fmt(k.week) + " son 7 günde")}
+    ${tile(k.total, "Toplam üye")}
+    ${tile(k.active, "Süren oyun")}
+    ${tile(k.todayGames, "Bugün başlayan oyun")}
+    ${tile(k.msgs, "Toplam sohbet mesajı", "içerikler gizli tutulur")}
+    ${tile(k.reports.length, "Son şikâyetler")}
+  </div>
+  <div class="card" style="--accent:${a.color}"><h2>Yeni üyeler <span>son 14 gün</span></h2>${chart(k.chart)}</div>
+  <div class="card"><h2>Son katılanlar</h2>${members(k.newest)}</div>
+  <div class="card"><h2>Haftalık lig <span>${isoWeekId()}</span></h2>${leagueList(k.league, "lp", "puan")}</div>
+  <div class="card"><h2>Şikâyetler</h2>${reportList(k.reports)}</div>`;
+}
+
+function renderPine() {
+  const a = APPS.pine;
+  return `<div class="hero" style="--accent:${a.color}"><div class="big" style="font-size:30px">🌲 Pine Game</div>
+    <div class="lbl">Çevrimdışı oyun</div></div>
+  <div class="card"><div class="note">Pine Game internetsiz çalışıyor ve bir sunucuya bağlı değil; bu yüzden anlık oyuncu,
+    üye ya da mesaj bilgisi yok. İndirme ve aktif cihaz sayıları Google Play Console'da günlük olarak görünür.</div>
+    <a class="btn" href="${a.play}" target="_blank" rel="noopener">Play Console istatistikleri ↗</a></div>`;
+}
+
+function renderHome(d, k) {
+  const card = (a, x, extra) => `<div class="appcard" style="--c:${a.color}"><div class="top"><div class="name">${a.icon} ${a.name}</div>
+    <span class="live"><i></i>${fmt(x?.online)} çevrimiçi</span></div>
+    <div class="nums"><div><b>${fmt(x?.today)}</b><span>bugün yeni</span></div><div><b>${fmt(x?.dau)}</b><span>24 saatte aktif</span></div>
+    <div><b>${fmt(x?.total)}</b><span>toplam üye</span></div></div>${extra || ""}</div>`;
+  const totalOnline = (d?.online || 0) + (k?.online || 0);
+  return `<div class="hero" style="--accent:#ffd65c"><div class="row"><div><div class="big">${fmt(totalOnline)}</div>
+    <div class="lbl">şu an tüm oyunlarda</div></div><span class="live"><i></i>CANLI</span></div></div>
+  <div class="apps">
+    ${card(APPS.duel, d, `<div class="note" style="margin-top:8px">${fmt(d?.active)} düello sürüyor · bugün ${fmt(d?.buysToday)} satın alma</div>`)}
+    ${card(APPS.kel, k, `<div class="note" style="margin-top:8px">${fmt(k?.active)} oyun sürüyor · ${fmt(k?.msgs)} sohbet mesajı</div>`)}
+    <div class="appcard" style="--c:${APPS.pine.color}"><div class="top"><div class="name">🌲 Pine Game</div></div>
+      <div class="note">Sunucusuz oyun; istatistikleri Play Console'da.</div></div>
+  </div>`;
+}
+
+// ---------------------------------------------------------------- app shell
+let tab = localStorage.getItem("tab") || "home";
+let cache = {};
+let busy = false;
+
+function drawTabs() {
+  $("tabs").innerHTML = TABS.map((t) => `<button class="${t.id === tab ? "on" : ""}" style="--c:${t.color}" data-t="${t.id}">
+    <span class="dot">${t.icon}</span>${t.label}</button>`).join("");
+  $("tabs").querySelectorAll("button").forEach((b) => b.onclick = () => { tab = b.dataset.t; localStorage.setItem("tab", tab); show(); });
+}
+
+function show() {
+  drawTabs();
+  const t = TABS.find((x) => x.id === tab);
+  $("title").innerHTML = (tab === "home" ? "Genel bakış" : APPS[tab].full) + `<small id="sub">${cache.at ? "Güncellendi: " + new Date(cache.at).toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }) : "Yükleniyor…"}</small>`;
+  let html = "";
+  if (errors.size) html += `<div class="err">Bazı veriler okunamadı (${esc([...errors].join(", "))}). Kurallar yeni yayınlandıysa bir dakika sonra yenileyin.</div>`;
+  if (tab === "pine") html += renderPine();
+  else if (!cache.at) html += `<div class="grid skeleton">${tile(null, "&nbsp;").repeat(6)}</div>`;
+  else if (tab === "home") html += renderHome(cache.duel, cache.kel);
+  else if (tab === "duel") html += renderDuel(cache.duel);
+  else if (tab === "kel") html += renderKel(cache.kel);
+  html += `<div class="stamp">U1 Games · yalnızca okuma · <a href="#" id="out2" style="color:var(--faint)">çıkış</a></div>`;
+  $("view").innerHTML = html;
+  $("out2").onclick = (e) => { e.preventDefault(); signOut(auth); };
+}
+
+async function refresh() {
+  if (busy) return;
+  busy = true; $("refresh").classList.add("spin"); errors.clear();
+  const [duel, kel] = await Promise.all([loadDuel(), loadKel()]);
+  cache = { duel, kel, at: now() };
+  busy = false; $("refresh").classList.remove("spin");
+  show();
+}
+$("refresh").onclick = refresh;
+setInterval(() => { if (!document.hidden && !$("app").classList.contains("hidden")) refresh(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (!document.hidden && cache.at && now() - cache.at > 30000) refresh(); });
+
+// ---------------------------------------------------------------- sign-in
+function screen(id) { for (const s of ["login", "verify", "app"]) $(s).classList.toggle("hidden", s !== id); }
+const msg = (id, text, ok = false) => { $(id).textContent = text; $(id).classList.toggle("ok", ok); };
+const authText = (e) => ({
+  "auth/invalid-credential": "E-posta ya da şifre hatalı.",
+  "auth/wrong-password": "Şifre hatalı.",
+  "auth/user-not-found": "Bu e-postayla hesap yok. \"Hesap oluştur\"a dokun.",
+  "auth/email-already-in-use": "Bu e-postayla zaten hesap var. Şifreni bilmiyorsan \"Şifremi unuttum\"a dokun.",
+  "auth/weak-password": "Şifre en az 6 karakter olmalı.",
+  "auth/too-many-requests": "Çok fazla deneme yapıldı, biraz sonra tekrar dene.",
+  "auth/network-request-failed": "İnternet bağlantısı yok.",
+}[e.code] || e.message);
+const creds = () => [$("email").value.trim(), $("pass").value];
+
+$("signIn").onclick = async () => { msg("loginMsg", ""); try { await signInWithEmailAndPassword(auth, ...creds()); } catch (e) { msg("loginMsg", authText(e)); } };
+$("pass").onkeydown = (e) => { if (e.key === "Enter") $("signIn").click(); };
+$("signUp").onclick = async () => {
+  msg("loginMsg", "");
+  const [email, pass] = creds();
+  if (email.toLowerCase() !== ADMIN) { msg("loginMsg", "Panel yalnızca " + ADMIN + " için açılır."); return; }
+  try { const c = await createUserWithEmailAndPassword(auth, email, pass); await sendEmailVerification(c.user); } catch (e) { msg("loginMsg", authText(e)); }
+};
+$("reset").onclick = async () => {
+  try { await sendPasswordResetEmail(auth, $("email").value.trim()); msg("loginMsg", "Şifre belirleme bağlantısı e-postana gönderildi.", true); }
+  catch (e) { msg("loginMsg", authText(e)); }
+};
+$("verified").onclick = async () => {
+  await auth.currentUser?.reload();
+  if (auth.currentUser?.emailVerified) { await auth.currentUser.getIdToken(true); enter(auth.currentUser); }
+  else msg("verifyMsg", "Henüz doğrulanmamış görünüyor. E-postadaki bağlantıya dokundun mu?");
+};
+$("resend").onclick = async () => { try { await sendEmailVerification(auth.currentUser); msg("verifyMsg", "Bağlantı yeniden gönderildi.", true); } catch (e) { msg("verifyMsg", authText(e)); } };
+$("out1").onclick = () => signOut(auth);
+
+function enter(user) {
+  if ((user.email || "").toLowerCase() !== ADMIN) { signOut(auth); msg("loginMsg", "Bu hesabın panele erişimi yok."); return; }
+  if (!user.emailVerified) { screen("verify"); $("verifyText").textContent = user.email + " adresine gönderilen doğrulama bağlantısına dokun, sonra \"Doğruladım\"a bas."; return; }
+  screen("app"); show(); refresh();
+}
+onAuthStateChanged(auth, (u) => { if (u) enter(u); else { cache = {}; screen("login"); } });
+</script>
+</body>
+</html>
