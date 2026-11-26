@@ -255,7 +255,13 @@ async function loadDuel() {
     count(query(collection(db, "duel_purchases"), where("at", ">=", ts(dayStart())))),
     safe(getDocs(query(collection(db, "duel_leagues", monthId(), "players"), orderBy("gold", "desc"), limit(8)))),
   ]);
-  return { ...p, active, waiting, todayGames, reports: reports?.docs || [], buys: buys?.docs || [], buysToday, league: league?.docs || [] };
+  const [shares, sharesToday, invited] = await Promise.all([
+    safe(getDocs(query(collection(db, "duel_shares"), orderBy("at", "desc"), limit(15)))),
+    count(query(collection(db, "duel_shares"), where("at", ">=", ts(dayStart())))),
+    count(query(collection(db, "duel_users"), where("refBy", ">", ""))),
+  ]);
+  return { ...p, active, waiting, todayGames, reports: reports?.docs || [], buys: buys?.docs || [], buysToday, league: league?.docs || [],
+    shares: shares?.docs || [], sharesToday, invited };
 }
 
 async function loadKel() {
@@ -333,6 +339,10 @@ function renderDuel(d) {
       <div class="r">${ago(msOf(x.get("at")))}</div></li>`).join("")}</ul>`
     : `<div class="note">Henüz kayıtlı satın alma yok. Satın almalar Düello'nun bir sonraki güncellemesinden (1.1.1) itibaren burada listelenir; şimdiye kadarki satışlar Play Console'da.</div>`}
     <a class="btn" href="${a.play}" target="_blank" rel="noopener">Play Console'da aç ↗</a></div>
+  <div class="card"><h2>Sosyal medya paylaşımları <span>bugün ${fmt(d.sharesToday)} · davetle gelen ${fmt(d.invited)}</span></h2>${d.shares.length ? `<ul class="list">${d.shares.map((x) => `<li>
+      <div class="av" style="background:#5aa9ff">↗</div>
+      <div class="main"><div class="t">${esc(x.get("nick") || "Oyuncu")}</div><div class="s"><a href="${esc(x.get("url"))}" target="_blank" rel="noopener" style="color:var(--muted)">${esc(String(x.get("url")).replace(/^https?:\/\/(www\.)?/, ""))}</a></div></div>
+      <div class="r">${ago(msOf(x.get("at")))}</div></li>`).join("")}</ul>` : `<div class="empty">Henüz paylaşım yok. Paylaşım görevi Düello 1.2.0 ile gelir.</div>`}</div>
   <div class="card"><h2>Son katılanlar</h2>${members(d.newest)}</div>
   <div class="card"><h2>Aylık sıralama <span>${monthId()}</span></h2>${leagueList(d.league, "gold", "altın")}</div>
   <div class="card"><h2>Şikâyetler</h2>${reportList(d.reports)}</div>`;
