@@ -13,6 +13,10 @@ on:
         description: "challenge | duel | yesterday | league (boş: saate göre)"
         required: false
         default: ""
+      services:
+        description: "Sadece bu kanallar, ör. instagram (boş: hepsi)"
+        required: false
+        default: ""
       send:
         description: "Buffer'a gönder"
         type: boolean
@@ -53,5 +57,6 @@ jobs:
           STAGE: send
           OUT_DIR: duello-social/posts
           BUFFER_API_KEY: ${{ secrets.BUFFER_API_KEY }}
+          SERVICES: ${{ github.event.inputs.services }}
           IMAGE_BASE: https://raw.githubusercontent.com/${{ github.repository }}/main/duello-social/posts
         run: python duello-social/post.py

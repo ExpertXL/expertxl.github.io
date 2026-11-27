@@ -120,6 +120,9 @@ def send_stage(out_dir):
     url = os.environ["IMAGE_BASE"].rstrip("/") + "/" + last["file"]
     failed = 0
     chans = channels()
+    only = [x.strip().lower() for x in os.environ.get("SERVICES", "").split(",") if x.strip()]
+    if only:
+        chans = [c for c in chans if c["service"].lower() in only]
     print("channels:", [(c["service"], c["name"]) for c in chans])
     for c in chans:
         try:
