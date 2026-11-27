@@ -83,7 +83,9 @@ def send(channel, text, image_url, due=None, video=None, cover_ms=None):
     service = channel["service"].lower()
     if service == "instagram":
         # links are not clickable in Instagram captions: point to the profile link instead
-        text = text.split("\n\n👉")[0] + "\n\n📲 İndirme linki profilde: @duello.game"
+        text = text.split("\n\n👉")[0]
+        if "profilde" not in text:
+            text += "\n\n📲 İndirme linki profilde: @duello.game"
     base = {"text": text, "channelId": channel["id"], "schedulingType": "automatic",
             "assets": [{"image": {"url": image_url, "metadata": {"altText": "Düello kelime oyunu"}}}]}
     if video:
