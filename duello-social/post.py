@@ -80,8 +80,14 @@ mutation($input: CreatePostInput!) {
 
 
 def send(channel, text, image_url):
+    service = channel["service"].lower()
+    if service == "instagram":
+        # links are not clickable in Instagram captions: point to the profile link instead
+        text = text.split("\n\n👉")[0] + "\n\n📲 İndirme linki profilde: @duello.game"
     base = {"text": text, "channelId": channel["id"], "schedulingType": "automatic",
             "assets": [{"image": {"url": image_url, "metadata": {"altText": "Düello kelime oyunu"}}}]}
+    if service == "instagram":
+        base["metadata"] = {"instagram": {"type": "post", "shouldShareToFeed": True}}
     last = None
     # post at once; fall back to the next queue slot if this account cannot share now
     for mode in ("shareNow", "addToQueue"):
