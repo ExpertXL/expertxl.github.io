@@ -79,7 +79,7 @@ mutation($input: CreatePostInput!) {
 }"""
 
 
-def send(channel, text, image_url, due=None, video=None):
+def send(channel, text, image_url, due=None, video=None, cover_ms=None):
     service = channel["service"].lower()
     if service == "instagram":
         # links are not clickable in Instagram captions: point to the profile link instead
@@ -87,7 +87,10 @@ def send(channel, text, image_url, due=None, video=None):
     base = {"text": text, "channelId": channel["id"], "schedulingType": "automatic",
             "assets": [{"image": {"url": image_url, "metadata": {"altText": "Düello kelime oyunu"}}}]}
     if video:
-        base["assets"] = [{"video": {"url": video, "thumbnailUrl": image_url}}]
+        v = {"url": video}
+        if cover_ms is not None:
+            v["metadata"] = {"thumbnailOffset": cover_ms}
+        base["assets"] = [{"video": v}]
     if service == "instagram":
         base["metadata"] = {"instagram": {"type": "reel" if video else "post", "shouldShareToFeed": True}}
     last = None
@@ -228,7 +231,7 @@ def send_reels():
         due = r["at"] if at > now + dt.timedelta(minutes=5) else None
         for c in chans:
             try:
-                print(r["key"], "->", send(c, r["text"], f"{base}/{r['file']}.jpg", due=due, video=f"{base}/{r['file']}.mp4"))
+                print(r["key"], "->", send(c, r["text"], None, due=due, video=f"{base}/{r['file']}.mp4", cover_ms=r.get("cover_ms")))
                 book[r["key"]] = r["at"]
             except Exception as e:  # noqa: BLE001
                 failed += 1
