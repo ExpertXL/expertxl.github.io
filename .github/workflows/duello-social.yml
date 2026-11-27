@@ -58,6 +58,11 @@ jobs:
           STAGE: ${{ github.event.inputs.now == 'true' && 'send' || 'plan-send' }}
           SERVICES: ${{ github.event.inputs.services }}
         run: python duello-social/post.py
+      - name: Reels
+        if: github.event.inputs.now != 'true'
+        env:
+          STAGE: reels
+        run: python duello-social/post.py
       - name: Planı kaydet
         if: always()
         run: |

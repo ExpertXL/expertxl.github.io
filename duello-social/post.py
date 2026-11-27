@@ -79,15 +79,17 @@ mutation($input: CreatePostInput!) {
 }"""
 
 
-def send(channel, text, image_url, due=None):
+def send(channel, text, image_url, due=None, video=None):
     service = channel["service"].lower()
     if service == "instagram":
         # links are not clickable in Instagram captions: point to the profile link instead
         text = text.split("\n\n👉")[0] + "\n\n📲 İndirme linki profilde: @duello.game"
     base = {"text": text, "channelId": channel["id"], "schedulingType": "automatic",
             "assets": [{"image": {"url": image_url, "metadata": {"altText": "Düello kelime oyunu"}}}]}
+    if video:
+        base["assets"] = [{"video": {"url": video, "thumbnailUrl": image_url}}]
     if service == "instagram":
-        base["metadata"] = {"instagram": {"type": "post", "shouldShareToFeed": True}}
+        base["metadata"] = {"instagram": {"type": "reel" if video else "post", "shouldShareToFeed": True}}
     last = None
     # at an exact time when given; otherwise at once, falling back to the next queue slot
     tries = [{"mode": "customScheduled", "dueAt": due}] if due else [{"mode": "shareNow"}, {"mode": "addToQueue"}]
@@ -203,7 +205,34 @@ def plan_send(out_dir):
             book[key] = post["at"]
     # keep the book short: drop entries older than a week
     cutoff = (dt.datetime.now(TR).date() - dt.timedelta(days=7)).isoformat()
-    book = {k: v for k, v in book.items() if k[:10] >= cutoff}
+    book = {k: v for k, v in book.items() if k.startswith("reel-") or k[:10] >= cutoff}
+    json.dump(book, open(book_path, "w", encoding="utf-8"), indent=1)
+    if failed:
+        sys.exit(1)
+
+
+def send_reels():
+    """Instagram Reels from reels/plan.json, each booked once in posts/planned.json."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    plan = json.load(open(os.path.join(here, "reels", "plan.json"), encoding="utf-8"))
+    book_path = os.path.join(here, "posts", "planned.json")
+    book = json.load(open(book_path, encoding="utf-8")) if os.path.exists(book_path) else {}
+    base = os.environ["IMAGE_BASE"].rsplit("/posts", 1)[0] + "/reels"
+    chans = [c for c in channels() if c["service"].lower() == "instagram"]
+    now = dt.datetime.now(dt.timezone.utc)
+    failed = 0
+    for r in plan:
+        if r["key"] in book:
+            continue
+        at = dt.datetime.fromisoformat(r["at"].replace("Z", "+00:00"))
+        due = r["at"] if at > now + dt.timedelta(minutes=5) else None
+        for c in chans:
+            try:
+                print(r["key"], "->", send(c, r["text"], f"{base}/{r['file']}.jpg", due=due, video=f"{base}/{r['file']}.mp4"))
+                book[r["key"]] = r["at"]
+            except Exception as e:  # noqa: BLE001
+                failed += 1
+                print(r["key"], "FAILED:", e)
     json.dump(book, open(book_path, "w", encoding="utf-8"), indent=1)
     if failed:
         sys.exit(1)
@@ -220,6 +249,8 @@ def main():
         plan_make(out_dir)
     elif stage == "plan-send":
         plan_send(out_dir)
+    elif stage == "reels":
+        send_reels()
     elif stage == "channels":
         for c in channels():
             print(c["service"], c["name"], c["id"])
