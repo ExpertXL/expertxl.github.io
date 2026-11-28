@@ -274,7 +274,8 @@ async function loadDuel() {
     safe(getDocs(query(duels, where("status", "==", "dateinvite"), limit(50)))),
     safe(getDocs(query(duels, where("status", "==", "date"), limit(50)))),
     safe(getDocs(query(collection(db, "duel_users"), orderBy("botPlayed", "desc"), limit(10)))),
-    safe(getAggregateFromServer(collection(db, "duel_users"), { n: sum("botPlayed"), w: sum("botWon") }).then((r) => r.data())),
+    safe(Promise.all(["botPlayed", "botWon"].map((f) => getAggregateFromServer(collection(db, "duel_users"), { v: sum(f) }).then((r) => r.data().v)))
+      .then(([n, w]) => ({ n, w }))),
     count(query(collection(db, "duel_users"), where("dailyWord", "==", today))),
     safe(getDocs(query(collection(db, "duel_users"), where("dailyWord", "==", today), limit(30)))),
   ]);
