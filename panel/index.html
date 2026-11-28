@@ -69,6 +69,11 @@
   .list { list-style: none; margin: 0; padding: 0; }
   .list li { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); }
   .list li:first-child { border-top: 0; }
+  .sub { display: flex; gap: 6px; overflow-x: auto; margin: 0 0 12px; padding-bottom: 2px; }
+  .sub button { flex: none; border: 0; border-radius: 12px; padding: 8px 12px; background: var(--card); color: var(--muted); font: inherit; font-weight: 700; font-size: 13px; }
+  .sub button.on { background: var(--text); color: var(--bg); }
+  .sub button b { margin-left: 5px; color: inherit; opacity: .7; }
+  .tag { font-size: 11.5px; font-weight: 700; border-radius: 8px; padding: 3px 7px; white-space: nowrap; }
   .av { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; font-weight: 800; color: #120b26; flex: none; }
   .list .main { flex: 1; min-width: 0; }
   .list .t { font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -152,7 +157,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendEmailVerification,
   sendPasswordResetEmail, signOut, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { getFirestore, collection, collectionGroup, query, where, orderBy, limit, getDocs, getDoc, doc, getCountFromServer, Timestamp }
+import { getFirestore, collection, collectionGroup, query, where, orderBy, limit, getDocs, getDoc, doc, getCountFromServer, Timestamp,
+  onSnapshot, getAggregateFromServer, sum }
   from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
 const app = initializeApp({
@@ -260,9 +266,45 @@ async function loadDuel() {
     count(query(collection(db, "duel_shares"), where("at", ">=", ts(dayStart())))),
     count(query(collection(db, "duel_users"), where("refBy", ">", ""))),
   ]);
+  const today = new Date(dayStart() + 3 * 3600000).toISOString().slice(0, 10);
+  const [activeDocs, openDocs, dates1, dates2, dates3, botTop, botSum, dailyToday, dailyList] = await Promise.all([
+    safe(getDocs(query(duels, where("status", "==", "active"), limit(100)))),
+    safe(getDocs(query(duels, where("status", "==", "open"), limit(100)))),
+    safe(getDocs(query(duels, where("status", "==", "dateopen"), limit(50)))),
+    safe(getDocs(query(duels, where("status", "==", "dateinvite"), limit(50)))),
+    safe(getDocs(query(duels, where("status", "==", "date"), limit(50)))),
+    safe(getDocs(query(collection(db, "duel_users"), orderBy("botPlayed", "desc"), limit(10)))),
+    safe(getAggregateFromServer(collection(db, "duel_users"), { n: sum("botPlayed"), w: sum("botWon") }).then((r) => r.data())),
+    count(query(collection(db, "duel_users"), where("dailyWord", "==", today))),
+    safe(getDocs(query(collection(db, "duel_users"), where("dailyWord", "==", today), limit(30)))),
+  ]);
+  const act = activeDocs?.docs || [];
   return { ...p, active, waiting, todayGames, reports: reports?.docs || [], buys: buys?.docs || [], buysToday, league: league?.docs || [],
-    shares: shares?.docs || [], sharesToday, invited };
+    shares: shares?.docs || [], sharesToday, invited,
+    live: act.filter((g) => !(g.get("turnSec") > 0)), timed: act.filter((g) => g.get("turnSec") > 0),
+    timedOpen: (openDocs?.docs || []).filter((g) => g.get("kind") === "timed"),
+    dates: [...(dates1?.docs || []), ...(dates2?.docs || []), ...(dates3?.docs || [])].sort((a, b) => (a.get("startAt") || 0) - (b.get("startAt") || 0)),
+    botTop: botTop?.docs || [], botSum: botSum || { n: 0, w: 0 }, dailyToday, dailyList: dailyList?.docs || [] };
 }
+
+// live presence: who is in the app right now and what they are doing (kept up to date as it changes)
+const DOING = {
+  duel: ["Gerçek düello", "#f25c7a"], timed: ["Süreli düello", "#5aa9ff"], date: ["Randevulu düello", "#b28cff"],
+  bot: ["Bilgisayara karşı", "#40c4c4"], daily: ["Günün kelimesi", "#ffd65c"], practice: ["Alıştırma", "#5ecc78"],
+  waiting: ["Rakip arıyor", "#ff9f43"], lobby: ["Randevu odasında", "#b28cff"], home: ["Ana sayfada", "#6f6494"],
+};
+let liveUsers = [];
+let liveStop = null;
+function watchLive() {
+  if (liveStop) liveStop();
+  const since = ts(now() - 2 * 60000);
+  liveStop = onSnapshot(query(collection(db, "duel_users"), where("lastSeen", ">=", since)), (snap) => {
+    liveUsers = snap.docs.filter((d) => now() - (msOf(d.get("lastSeen")) || 0) < 2 * 60000);
+    if (tab === "duel" || tab === "home") show();
+  }, () => errors.add("canlı liste"));
+}
+// the window above is fixed when the listener starts, so restart it every two minutes
+setInterval(() => { if (!document.hidden && auth.currentUser) watchLive(); }, 120000);
 
 async function loadKel() {
   const games = collection(db, "games");
@@ -325,10 +367,67 @@ function hero(a, online, dau) {
   </div></div>`;
 }
 
+let dtab = localStorage.getItem("dtab") || "live";
+const pname = (g, i) => esc((g.get("names") || [])[i] || "?");
+const leftTxt = (ms) => { const m = Math.max(0, Math.round(ms / 60000)); return m >= 60 ? Math.floor(m / 60) + " sa " + (m % 60) + " dk" : m + " dk"; };
+const clock = (ms) => new Date(ms).toLocaleString("tr-TR", { weekday: "short", hour: "2-digit", minute: "2-digit" });
+function gameList(docs, right, empty) {
+  if (!docs.length) return `<div class="empty">${empty}</div>`;
+  return `<ul class="list">${docs.map((g) => `<li>${av(pname(g, 0), (g.get("avatars") || [])[0])}
+    <div class="main"><div class="t">${pname(g, 0)}${(g.get("players") || []).length > 1 ? " · " + pname(g, 1) : ""}</div>
+    <div class="s">${g.get("len")} harf · ${(g.get("rows") || []).length} hamle · pot ${fmt(g.get("pot"))}</div></div>
+    <div class="r">${right(g)}</div></li>`).join("")}</ul>`;
+}
+function userList(docs, sub, right, empty) {
+  if (!docs.length) return `<div class="empty">${empty}</div>`;
+  return `<ul class="list">${docs.map((u) => `<li>${av(u.get("nick"), u.get("avatar"))}
+    <div class="main"><div class="t">${esc(u.get("nick") || "(adsız)")}</div><div class="s">${sub(u)}</div></div>
+    <div class="r">${right(u)}</div></li>`).join("")}</ul>`;
+}
+function duelSub(d) {
+  const t = now();
+  const mode = (k) => liveUsers.filter((u) => (u.get("doing") || "home") === k).length;
+  const subs = [
+    ["live", "🟢 Canlı", liveUsers.length], ["duel", "⚔️ Gerçek düello", d.live.length], ["timed", "⏱ Süreli", d.timed.length + d.timedOpen.length],
+    ["date", "📆 Randevu", d.dates.length], ["bot", "🤖 Bilgisayar", mode("bot")], ["daily", "📅 Günün kelimesi", d.dailyToday],
+  ];
+  let body = "";
+  if (dtab === "live") {
+    const order = Object.keys(DOING);
+    const users = [...liveUsers].sort((a, b) => order.indexOf(a.get("doing") || "home") - order.indexOf(b.get("doing") || "home"));
+    body = `<div class="grid">${["duel", "timed", "bot", "daily", "waiting", "home"].map((k) => tile(mode(k), DOING[k][0])).join("")}</div>
+      <div class="card"><h2>Şu an uygulamada <span>${fmt(liveUsers.length)} kişi · kendiliğinden yenilenir</span></h2>${userList(users,
+        (u) => `${fmt(u.get("played") || 0)} gerçek · ${fmt(u.get("botPlayed") || 0)} bilgisayar · ${fmt(u.get("gold"))} altın`,
+        (u) => { const [l, c] = DOING[u.get("doing") || "home"] || DOING.home; return `<span class="tag" style="background:${c}22;color:${c}">${l}</span>`; },
+        "Şu an uygulamada kimse yok. (1.4.1 öncesi sürümler oyun ekranındayken görünmez.)")}</div>`;
+  } else if (dtab === "duel") {
+    body = `<div class="grid">${tile(d.live.length, "Şu an süren gerçek düello")}${tile(d.todayGames, "Bugün başlayan düello", "süreli ve randevulu dahil")}${tile(d.waiting - d.timedOpen.length, "Anlık rakip bekleyen")}</div>
+      <div class="card"><h2>Süren gerçek düellolar</h2>${gameList(d.live, (g) => ago(msOf(g.get("startedAt")) || msOf(g.get("createdAt"))), "Şu an süren gerçek düello yok.")}</div>`;
+  } else if (dtab === "timed") {
+    body = `<div class="grid">${tile(d.timed.length, "Süren süreli oyun")}${tile(d.timedOpen.length, "Rakip bekleyen süreli oyun")}</div>
+      <div class="card"><h2>Süren süreli oyunlar</h2>${gameList(d.timed, (g) => {
+        const turn = g.get("turn") || 0; const dl = (msOf(g.get("turnAt")) || msOf(g.get("startedAt")) || t) + g.get("turnSec") * 1000;
+        return `sıra ${pname(g, turn)}<br>${leftTxt(dl - t)} kaldı`; }, "Süren süreli oyun yok.")}</div>
+      <div class="card"><h2>Rakip bekleyenler</h2>${gameList(d.timedOpen, (g) => (g.get("turnSec") / 3600) + " saatlik<br>" + ago(msOf(g.get("createdAt"))), "Rakip bekleyen süreli oyun yok.")}</div>`;
+  } else if (dtab === "date") {
+    const st = { dateopen: "Katılan bekleniyor", dateinvite: "Davet bekliyor", date: "Kesin" };
+    body = `<div class="card"><h2>Randevular</h2>${gameList(d.dates, (g) => `${clock(g.get("startAt") || 0)}<br>${st[g.get("status")] || ""}`, "Kurulu randevu yok.")}</div>`;
+  } else if (dtab === "bot") {
+    const rate = d.botSum.n ? Math.round((d.botSum.w || 0) * 100 / d.botSum.n) : 0;
+    body = `<div class="grid">${tile(mode("bot"), "Şu an bilgisayara karşı")}${tile(d.botSum.n, "Toplam bilgisayar maçı", "%" + rate + " oyuncu kazandı")}</div>
+      <div class="card"><h2>En çok bilgisayarla oynayanlar</h2>${userList(d.botTop.filter((u) => (u.get("botPlayed") || 0) > 0),
+        (u) => `${fmt(u.get("botWon") || 0)} galibiyet · en iyi seri ${fmt(u.get("botBestStreak") || 0)}`, (u) => fmt(u.get("botPlayed")) + " maç", "Henüz bilgisayar maçı yok.")}</div>`;
+  } else if (dtab === "daily") {
+    body = `<div class="grid">${tile(d.dailyToday, "Bugün günün kelimesini çözen")}${tile(mode("daily"), "Şu an günün kelimesinde")}</div>
+      <div class="card"><h2>Bugün çözenler</h2>${userList(d.dailyList, (u) => "seri " + fmt(u.get("streak") || 0) + " gün", (u) => fmt(u.get("gold")) + " altın", "Bugün henüz çözen yok.")}</div>`;
+  }
+  return `<div class="sub">${subs.map(([id, l, n]) => `<button class="${id === dtab ? "on" : ""}" data-d="${id}">${l}<b>${fmt(n)}</b></button>`).join("")}</div>` + body;
+}
+
 function renderDuel(d) {
   const a = APPS.duel;
   const gold = d.buys.reduce((s, x) => s + (x.get("gold") || 0), 0);
-  return hero(a, d.online, d.dau) + `
+  return hero(a, liveUsers.length || d.online, d.dau) + duelSub(d) + `
   <div class="grid">
     ${tile(d.today, "Bugün yeni üye", fmt(d.week) + " son 7 günde")}
     ${tile(d.total, "Toplam üye")}
@@ -419,6 +518,7 @@ function show() {
   else if (tab === "kel") html += renderKel(cache.kel);
   html += `<div class="stamp">U1 Games · yalnızca okuma · <a href="#" id="out2" style="color:var(--faint)">çıkış</a></div>`;
   $("view").innerHTML = html;
+  $("view").querySelectorAll(".sub button").forEach((b) => b.onclick = () => { dtab = b.dataset.d; localStorage.setItem("dtab", dtab); show(); });
   $("out2").onclick = (e) => { e.preventDefault(); signOut(auth); };
 }
 
@@ -471,7 +571,7 @@ $("out1").onclick = () => signOut(auth);
 function enter(user) {
   if ((user.email || "").toLowerCase() !== ADMIN) { signOut(auth); msg("loginMsg", "Bu hesabın panele erişimi yok."); return; }
   if (!user.emailVerified) { screen("verify"); $("verifyText").textContent = user.email + " adresine gönderilen doğrulama bağlantısına dokun, sonra \"Doğruladım\"a bas."; return; }
-  screen("app"); show(); refresh();
+  screen("app"); show(); refresh(); watchLive();
 }
 onAuthStateChanged(auth, (u) => { if (u) enter(u); else { cache = {}; screen("login"); } });
 </script>
