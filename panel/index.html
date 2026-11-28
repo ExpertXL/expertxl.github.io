@@ -296,7 +296,12 @@ function members(docs) {
   if (!docs.length) return `<div class="empty">Son 14 günde yeni üye yok.</div>`;
   return `<ul class="list">${docs.map((d) => `<li>${av(d.get("nick"), d.get("avatar"))}
     <div class="main"><div class="t">${esc(d.get("nick") || "(adsız)")}</div>
-    <div class="s">${d.get("played") != null ? fmt(d.get("played")) + " oyun" : ""}${d.get("gold") != null ? " · " + fmt(d.get("gold")) + " altın" : ""}</div></div>
+    <div class="s">${[
+      fmt(d.get("played") || 0) + " gerçek düello",
+      fmt(d.get("botPlayed") || 0) + " bilgisayar",
+      d.get("dailyWord") ? "günün kelimesi ✓" : "",
+      d.get("gold") != null ? fmt(d.get("gold")) + " altın" : "",
+    ].filter(Boolean).join(" · ")}</div></div>
     <div class="r">${ago(msOf(d.get("createdAt")))}</div></li>`).join("")}</ul>`;
 }
 function reportList(docs) {
